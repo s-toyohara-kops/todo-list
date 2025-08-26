@@ -1,0 +1,400 @@
+/* ===== ベース（ライト前提でスッキリ） ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light;
+  /* 文字と背景をライトに固定 */
+  color: #213547;
+  background: #ffffff;
+
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: block;
+  /* 中央寄せをやめる */
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+a {
+  color: #646cff;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #535bf2;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+/* ボタンの基本をライトに（Viteテンプレの黒背景を撤回） */
+button {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  padding: 0.6em 1.0em;
+  font-size: 1em;
+  font-weight: 500;
+  background: #f9f9f9;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+button:hover {
+  border-color: #646cff;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 3px auto -webkit-focus-ring-color;
+}
+
+/* 見出しの基本 */
+h1 {
+  font-size: 20px;
+  margin: 0 0 10px;
+}
+
+h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+/* ===== レイアウト ===== */
+#app {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  /* 左：カレンダー / 右：内容 */
+  gap: 24px;
+  margin: 20px auto;
+  padding: 20px;
+  min-height: calc(100vh - 40px);
+  /* text-align は明示しない（中央寄せ防止） */
+}
+
+.left {
+  border-right: 1px solid #eee;
+  padding-right: 16px;
+}
+
+.right {
+  padding-left: 8px;
+  max-width: 800px;
+}
+
+/* 右側ヘッダー */
+.right-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.date-label {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ===== カレンダー ===== */
+.cal-head {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cal-nav {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.cal-title {
+  text-align: center;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 40px;
+  /* 各セル高さを安定化 */
+  gap: 4px;
+}
+
+.cal-w {
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+  padding: 4px 0;
+}
+
+.cal-cell {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px 0;
+  text-align: center;
+  background: #fff;
+  cursor: pointer;
+}
+
+.cal-cell.is-dim {
+  opacity: 0.45;
+}
+
+.cal-cell.is-selected {
+  outline: 2px solid #646cff;
+}
+
+.cal-cell.is-today {
+  border-color: #646cff;
+}
+
+.btn-today {
+  margin-top: 10px;
+  width: 20%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+/* ===== タスクフォーム ===== */
+.tfm {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
+}
+
+.tfm-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tfm-title {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.tfm-add {
+  padding: 6px 10px;
+}
+
+.tfm-schedule {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  border: none;
+  padding: 0;
+}
+
+.tfm-radio {
+  margin-right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tfm-weekdays {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  opacity: 0.5;
+}
+
+.tfm-weekdays[data-disabled="false"] {
+  opacity: 1;
+}
+
+.tfm-wd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #ddd;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.tfm-help {
+  color: #888;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+
+.tfm-error {
+  color: #c00;
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+/* ===== 日別リスト ===== */
+.dl-section {
+  margin-bottom: 24px;
+}
+
+.dl-section:last-child {
+  margin-bottom: 0;
+}
+
+.dl-completed {
+  opacity: 0.8;
+  border-top: 1px solid #eee;
+  padding-top: 16px;
+}
+
+.dl-completed .dl-head span:first-child {
+  color: #666;
+  font-size: 14px;
+}
+
+.dl-item-completed {
+  opacity: 0.7;
+}
+
+.dl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.dl-count {
+  color: #888;
+  font-size: 12px;
+}
+
+.dl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  transition: opacity 0.2s;
+}
+
+.dl-check {
+  width: 18px;
+  height: 18px;
+}
+
+.dl-title {
+  flex: 1;
+}
+
+.dl-title.is-done {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.dl-btn {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f9f9f9;
+  cursor: pointer;
+}
+
+.dl-btn:hover {
+  border-color: #bbb;
+}
+
+.dl-danger {
+  color: #b00020;
+}
+
+.dl-empty {
+  color: #888;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+/* ===== カスタムダイアログ ===== */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.dialog-content h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.dialog-content p {
+  margin: 0 0 20px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dialog-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f9f9f9;
+  cursor: pointer;
+  font-size: 14px;
+}

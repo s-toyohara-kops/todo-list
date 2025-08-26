@@ -1,0 +1,173 @@
+import type { Store, Task, TaskId, RepeatRule, DateKey, Weekday } from './types';
+import { toKey, getWeekday } from './lib/date';
+
+// 内部状態
+let store: Store = {
+    tasks: [],
+    completion: {},
+    selectedDate: toKey(new Date()),
+};
+
+//変更通知
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+function emit() {
+    for (const fn of listeners) fn();
+}
+
+//　状態の購読
+export function subscribe(fn: Listener): () => void {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+}
+
+// ユーティリティ
+function uuid(): string {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
+    }
+    return 'id-' + Math.random().toString(36).slice(2, 10);
+}
+
+// 外から読み取りように渡す
+export function getState(): Store {
+    return {
+        tasks: [...store.tasks],
+        completion: { ...store.completion },
+        selectedDate: store.selectedDate,
+    };
+}
+
+// 初期化
+export function initStore(date?: Date | DateKey) {
+    store.selectedDate = typeof date === 'string' ? date : toKey(date ?? new Date());
+    emit();
+}
+
+// 選択中の日付を変更
+export function setSelectedDate(next: Date | DateKey) {
+    store.selectedDate = typeof next === 'string' ? next : toKey(next);
+    emit();
+}
+
+// タスク追加
+export function addTask(title: string, rule: RepeatRule): Task {
+    const task: Task = {
+        id: uuid(),
+        title: title.trim(),
+        rule,
+        createdAt: Date.now(),
+    };
+    store.tasks.push(task);
+    emit();
+    return task;
+}
+
+// タイトル編集
+export function editTask(id: TaskId, nextTitle: string) {
+    const t = store.tasks.find((x) => x.id === id);
+    if (!t) return;
+    const v = nextTitle.trim();
+    if (!v) return;
+    t.title = v;
+    emit();
+}
+
+// アーカイブ
+export function archiveTask(id: TaskId) {
+    const t = store.tasks.find(((x) => x.id === id));
+    if (!t) return;
+    t.archived = true;
+    emit();
+}
+
+// 当日の完了状態を取得
+export function isCompleted(id: TaskId, date: Date | DateKey): boolean {
+    const key = typeof date === 'string' ? date : toKey(date);
+    return !!store.completion[key]?.[id];
+}
+
+// 当日の完了状態を更新
+export function setCompletion(id: TaskId, date: Date | DateKey, done: boolean) {
+    const key = typeof date === 'string' ? date : toKey(date);
+    const dayMap = store.completion[key] ?? {};
+    dayMap[id] = done;
+    store.completion[key] = dayMap;
+    emit();
+}
+
+// 隠されたタスクの管理
+type HiddenTasksMap = Record<DateKey, Set<TaskId>>;
+let hiddenTasks: HiddenTasksMap = {};
+
+// 特定の日にタスクを隠す
+export function hideTaskForDate(id: TaskId, date: Date | DateKey) {
+    const key = typeof date === 'string' ? date : toKey(date);
+    if (!hiddenTasks[key]) {
+        hiddenTasks[key] = new Set();
+    }
+    hiddenTasks[key].add(id);
+    emit();
+}
+
+// タスクが特定の日に隠されているかチェック
+export function isTaskHiddenForDate(id: TaskId, date: Date | DateKey): boolean {
+    const key = typeof date === 'string' ? date : toKey(date);
+    return hiddenTasks[key]?.has(id) ?? false;
+}
+
+// タスクを完全に削除
+export function deleteTask(id: TaskId) {
+    const index = store.tasks.findIndex(t => t.id === id);
+    if (index === -1) return;
+    store.tasks.splice(index, 1);
+
+    // 完了状態も削除
+    for (const dateKey in store.completion) {
+        delete store.completion[dateKey][id];
+    }
+
+    // 隠し状態も削除
+    for (const dateKey in hiddenTasks) {
+        hiddenTasks[dateKey].delete(id);
+    }
+
+    emit();
+}
+
+// 特定の日のタスク完了状態のみ削除（スケジュールタスク用）
+export function deleteCompletionForDate(id: TaskId, date: Date | DateKey) {
+    const key = typeof date === 'string' ? date : toKey(date);
+    if (store.completion[key]) {
+        delete store.completion[key][id];
+    }
+    emit();
+}
+
+// 指定日の表示対象タスクを算出
+export function getTasksFor(date: Date | DateKey): Task[] {
+    const key = typeof date === 'string' ? date : toKey(date);
+    const d = new Date(key);
+    const wd: Weekday = getWeekday(d);
+    const isWeekDay = [1, 2, 3, 4, 5].includes(wd);
+    const isWeekEnd = [0, 6].includes(wd);
+
+    return store.tasks.filter((t) => {
+        if (t.archived) return false;
+
+        // この日に隠されているタスクは表示しない
+        if (isTaskHiddenForDate(t.id, key)) return false;
+
+        if (t.rule.kind === 'none') {
+            // 'none'タスクは作成された日のみに表示
+            const createdDate = toKey(new Date(t.createdAt));
+            return createdDate === key;
+        }
+        if (t.rule.kind === 'daily') return true;
+        if (t.rule.kind === 'weekly') return t.rule.days.includes(wd);
+        if (t.rule.kind === 'weekDays') return isWeekDay;
+        if (t.rule.kind === 'weekEnds') return isWeekEnd;
+        return false;
+    });
+}
