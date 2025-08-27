@@ -12,8 +12,8 @@ export function renderTaskForm(container: HTMLElement) {
             <legend>スケジュール</legend>
 
             <label class="tfm-radio">
-            <input type="radio" name="rule" value="none" checked />
-            繰り返しなし
+                <input type="radio" name="rule" value="none" checked />
+                繰り返しなし
             </label>
 
             <label class="tfm-radio">
@@ -31,7 +31,6 @@ export function renderTaskForm(container: HTMLElement) {
             </div>
         </fieldset>
 
-        <p class="tdm-help">※「曜日指定を選んだら少なくとも1つはチェック</p>
         <p class="tfm-error" hidden></p>
     </form>
     `;
@@ -81,13 +80,18 @@ export function renderTaskForm(container: HTMLElement) {
 
         addTask(title, rule);
         elTitle.value = '';
-        elTitle.focus();
+        (container.querySelector('.tfm-title') as HTMLInputElement).focus();
     });
 
     elTitle.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && e.metaKey) {
-            e.preventDefault();
-            (container.querySelector('.tfm-add') as HTMLButtonElement).click();
+        if (e.key === 'Enter') {
+            if (e.metaKey) {
+                e.preventDefault();
+                (container.querySelector('.tfm-add') as HTMLButtonElement).click();
+            } else {
+                e.preventDefault();
+            }
+
         }
     });
 }

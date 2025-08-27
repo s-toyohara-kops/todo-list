@@ -59,10 +59,15 @@ export function renderCalender(container: HTMLElement) {
 
     function alignWithinMonth(currentKey: DateKey, targetMonthDate: Date): DateKey {
         const cur = fromKey(currentKey);
-        const day = cur.getDate();
+        const day = cur.getDate();              // 現在の日
         const d = new Date(targetMonthDate);
-        d.setDate(1);
-        const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        d.setDate(1);                           // 移動先月の1日
+        const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); // 月末日
+
+        // 現在の日が移動先月に存在するかチェック
+        const targetDay = Math.min(day, last);  // より小さい値を選択
+        d.setDate(targetDay);                   // 調整された日付を設定
+
         return toKey(d);
     }
 }
