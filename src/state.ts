@@ -51,12 +51,25 @@ export function setSelectedDate(next: Date | DateKey) {
     emit();
 }
 
-// タスク追加
-export function addTask(title: string, rule: RepeatRule): Task {
+// 繰り返しタスク追加
+export function addRecurringTask(title: string, rule: RepeatRule): Task {
     const task: Task = {
         id: uuid(),
         title: title.trim(),
         rule,
+        createdAt: Date.now(),
+    };
+    store.tasks.push(task);
+    emit();
+    return task;
+}
+
+// 指定日のみのタスク追加
+export function addOneTimeTask(title: string, targetDate: DateKey): Task {
+    const task: Task = {
+        id: uuid(),
+        title: title.trim(),
+        targetDate,
         createdAt: Date.now(),
     };
     store.tasks.push(task);
@@ -159,15 +172,11 @@ export function getTasksFor(date: Date | DateKey): Task[] {
         // この日に隠されているタスクは表示しない
         if (isTaskHiddenForDate(t.id, key)) return false;
 
-        if (t.rule.kind === 'none') {
-            // 'none'タスクは作成された日のみに表示
-            const createdDate = toKey(new Date(t.createdAt));
-            return createdDate === key;
-        }
-        if (t.rule.kind === 'daily') return true;
-        if (t.rule.kind === 'weekly') return t.rule.days.includes(wd);
-        if (t.rule.kind === 'weekDays') return isWeekDay;
-        if (t.rule.kind === 'weekEnds') return isWeekEnd;
+        if (!t.rule) return t.targetDate === key;
+        if (t.rule?.kind === 'daily') return true;
+        if (t.rule?.kind === 'weekly') return t.rule.days.includes(wd);
+        if (t.rule?.kind === 'weekDays') return isWeekDay;
+        if (t.rule?.kind === 'weekEnds') return isWeekEnd;
         return false;
     });
 }

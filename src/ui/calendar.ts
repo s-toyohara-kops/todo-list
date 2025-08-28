@@ -29,7 +29,6 @@ export function renderCalender(container: HTMLElement) {
                     'cal-cell',
                     isSel ? 'is-selected' : '',
                     isSameMonth ? '' : 'is-dim',
-                    isSameDay(d, new Date()) ? 'is-today' : '',
                 ]
                     .filter(Boolean)
                     .join('');

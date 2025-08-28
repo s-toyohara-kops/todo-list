@@ -1,5 +1,5 @@
-import { addTask } from '../state';
-import type { RepeatRule, Weekday } from '../types';
+import { addRecurringTask, addOneTimeTask, getState } from '../state';
+import type { Weekday, DateKey } from '../types';
 
 export function renderTaskForm(container: HTMLElement) {
     container.innerHTML = `
@@ -63,22 +63,17 @@ export function renderTaskForm(container: HTMLElement) {
             return showError(elErr, 'タイトルを入力')
         }
 
-        const ruleKind = getRuleKind(radios);
-        let rule: RepeatRule;
+        const targetDateKey: DateKey = getState().selectedDate;
+        const rule = getRuleKind(radios);
 
-        if (ruleKind === 'none') {
-            rule = { kind: 'none' };
-        } else if (ruleKind === 'daily') {
-            rule = { kind: 'daily' };
-        } else {
-            const days = getCheckedWeekdays(weekdayBox);
-            if (days.length === 0) {
-                return showError(elErr, '曜日を選択');
-            }
-            rule = { kind: 'weekly', days };
+        if (!rule) {
+            addOneTimeTask(title, targetDateKey);
+        } else if (rule === 'daily') {
+            addRecurringTask(title, { kind: 'daily' });
+        } else if (rule === 'weekly') {
+            addRecurringTask(title, { kind: 'weekly', days: getCheckedWeekdays(weekdayBox) });
         }
 
-        addTask(title, rule);
         elTitle.value = '';
         (container.querySelector('.tfm-title') as HTMLInputElement).focus();
     });
@@ -111,11 +106,10 @@ function weekdayCheckboxes(): string {
         .join('');
 }
 
-function getRuleKind(radios: HTMLInputElement[]): 'none' | 'daily' | 'weekly' {
+function getRuleKind(radios: HTMLInputElement[]): 'daily' | 'weekly' | undefined {
     const r = radios.find(r => r.checked);
     if (r?.value === 'weekly') return 'weekly';
     if (r?.value === 'daily') return 'daily';
-    return 'none';
 }
 
 function getCheckedWeekdays(box: HTMLDivElement): Weekday[] {

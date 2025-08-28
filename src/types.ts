@@ -9,7 +9,6 @@ export type DateKey = string;
 
 /** 繰り返しルール */
 export type RepeatRule =
-    | { kind: 'none' }
     | { kind: 'daily' }
     | { kind: 'weekly'; days: Weekday[] }
     | { kind: 'weekDays'; days: [1, 2, 3, 4, 5] }
@@ -19,7 +18,8 @@ export type RepeatRule =
 export interface Task {
     id: TaskId;
     title: string;
-    rule: RepeatRule;
+    targetDate?: DateKey;
+    rule?: RepeatRule;
     createdAt: number;
     archived?: boolean;
 }
