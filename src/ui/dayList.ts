@@ -106,7 +106,7 @@ function createTaskItem(task: Task, selectedDate: string, isCompleted: boolean):
 
 function handleDeleteTask(task: Task, selectedDate: string): Promise<void> {
     return new Promise((resolve) => {
-        if (task.rule.kind === 'none') {
+        if (!task.rule) {
             // スケジュールなしタスクは完全削除のみ
             if (confirm(`「${task.title}」を削除しますか？`)) {
                 deleteTask(task.id);
