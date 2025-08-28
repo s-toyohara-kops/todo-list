@@ -1,5 +1,6 @@
 import type { Store, Task, TaskId, RepeatRule, DateKey, Weekday } from './types';
 import { toKey, getWeekday } from './lib/date';
+import { loadFromStorage, saveToStorage } from './lib/storage';
 
 // 内部状態
 let store: Store = {
@@ -12,8 +13,16 @@ let store: Store = {
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
-function emit() {
+function emit(shouldSave: boolean = true) {
     for (const fn of listeners) fn();
+
+    // 自動保存　
+    if (shouldSave) {
+        const saveResult = saveToStorage(store);
+        if (!saveResult.success) {
+            console.error('自動保存に失敗しました', saveResult.error);
+        }
+    }
 }
 
 //　状態の購読
@@ -41,14 +50,29 @@ export function getState(): Store {
 
 // 初期化
 export function initStore(date?: Date | DateKey) {
-    store.selectedDate = typeof date === 'string' ? date : toKey(date ?? new Date());
-    emit();
+    const loadResult = loadFromStorage();
+
+    if (loadResult.success && loadResult.data) {
+        store = { ...loadResult.data };
+    } else {
+        console.warn('LocalStorageの読み込みに失敗、デフォルト状態を使用:', loadResult.error);
+        store = {
+            tasks: [],
+            completion: {},
+            selectedDate: toKey(new Date())
+        };
+    }
+
+    if (date) {
+        store.selectedDate = typeof date === 'string' ? date : toKey(date);
+    }
+    emit(true);
 }
 
 // 選択中の日付を変更
 export function setSelectedDate(next: Date | DateKey) {
     store.selectedDate = typeof next === 'string' ? next : toKey(next);
-    emit();
+    emit(false);
 }
 
 // 繰り返しタスク追加
@@ -60,7 +84,7 @@ export function addRecurringTask(title: string, rule: RepeatRule): Task {
         createdAt: Date.now(),
     };
     store.tasks.push(task);
-    emit();
+    emit(true);
     return task;
 }
 
@@ -73,7 +97,7 @@ export function addOneTimeTask(title: string, targetDate: DateKey): Task {
         createdAt: Date.now(),
     };
     store.tasks.push(task);
-    emit();
+    emit(true);
     return task;
 }
 
@@ -84,7 +108,7 @@ export function editTask(id: TaskId, nextTitle: string) {
     const v = nextTitle.trim();
     if (!v) return;
     t.title = v;
-    emit();
+    emit(true);
 }
 
 // アーカイブ
@@ -92,7 +116,7 @@ export function archiveTask(id: TaskId) {
     const t = store.tasks.find(((x) => x.id === id));
     if (!t) return;
     t.archived = true;
-    emit();
+    emit(true);
 }
 
 // 当日の完了状態を取得
@@ -107,7 +131,7 @@ export function setCompletion(id: TaskId, date: Date | DateKey, done: boolean) {
     const dayMap = store.completion[key] ?? {};
     dayMap[id] = done;
     store.completion[key] = dayMap;
-    emit();
+    emit(true);
 }
 
 // 隠されたタスクの管理
@@ -121,7 +145,7 @@ export function hideTaskForDate(id: TaskId, date: Date | DateKey) {
         hiddenTasks[key] = new Set();
     }
     hiddenTasks[key].add(id);
-    emit();
+    emit(true);
 }
 
 // タスクが特定の日に隠されているかチェック
@@ -146,7 +170,7 @@ export function deleteTask(id: TaskId) {
         hiddenTasks[dateKey].delete(id);
     }
 
-    emit();
+    emit(true);
 }
 
 // 特定の日のタスク完了状態のみ削除（スケジュールタスク用）
@@ -155,7 +179,7 @@ export function deleteCompletionForDate(id: TaskId, date: Date | DateKey) {
     if (store.completion[key]) {
         delete store.completion[key][id];
     }
-    emit();
+    emit(true);
 }
 
 // 指定日の表示対象タスクを算出

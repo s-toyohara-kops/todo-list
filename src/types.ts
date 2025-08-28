@@ -33,3 +33,18 @@ export interface Store {
     completion: CompletionMap;
     selectedDate: DateKey;
 }
+
+/** ストレージに保存するデータ形式 */
+export interface StorageData {
+    version: string;
+    tasks: Task[];
+    completion: CompletionMap;
+    lastUpdated: number;
+}
+
+/** ストレージ操作の結果 */
+export interface StorageResult<T> {
+    success: boolean;
+    data?: T;
+    error?: string;
+}
