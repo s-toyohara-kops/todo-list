@@ -4,25 +4,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Todo List</title>
+  <title>ToDo - 習慣管理アプリ</title>
 </head>
 
 <body>
-  <div id="app">
-    <aside class="left">
-      <h1 class="logo-title">Todo</h1>
-      <div id="calender"></div>
-      <button class="btn-today">今日</button>
+  <div id="app" class="app-layout">
+    <!-- サイドバー -->
+    <aside class="sidebar" id="sidebar">
+      <!-- ヘッダー -->
+      <div class="sidebar-header">
+        <h1 class="logo-title">ToDo</h1>
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="サイドバーを閉じる">×</button>
+      </div>
+
+      <!-- カレンダー -->
+      <div class="calendar-container">
+        <div id="calender" class="calendar"></div>
+        <button class="btn btn-secondary btn-today">今日</button>
+      </div>
+
+      <!-- ナビゲーションメニュー -->
+      <nav class="nav-menu">
+        <button class="nav-item" data-view="create">
+          <span class="nav-icon">➕</span>
+          <span class="nav-text">タスク作成</span>
+        </button>
+        <button class="nav-item" data-view="diary">
+          <span class="nav-icon">📔</span>
+          <span class="nav-text">ダイアリー</span>
+        </button>
+        <button class="nav-item" data-view="report">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">レポート</span>
+        </button>
+      </nav>
     </aside>
 
-    <main class="right">
-      <header class="right-head">
-        <h2 id="date-label"></h2>
-      </header>
+    <!-- メインコンテンツ -->
+    <main class="main-content">
+      <!-- メイン画面（main） -->
+      <div class="view" id="view-main">
+        <header class="main-header">
+          <button class="sidebar-toggle mobile-only" id="mobile-sidebar-toggle" aria-label="メニューを開く">≡</button>
+          <div class="date-info">
+            <h2 id="date-label" class="date-label"></h2>
+            <div id="progress-info" class="progress-info"></div>
+          </div>
+        </header>
 
-      <section class="task-form"></section>
-      <section class="day-list"></section>
+        <section class="day-list"></section>
+      </div>
+
+      <!-- タスク作成画面（create） -->
+      <div class="view" id="view-create" style="display: none;">
+        <header class="view-header">
+          <button class="btn-back" data-target="main">← 戻る</button>
+          <h2>タスク作成</h2>
+          <button class="btn btn-primary" id="save-task">保存</button>
+        </header>
+        <div class="form-container">
+          <!-- タスク作成フォームをここに移動 -->
+          <section class="task-form card"></section>
+        </div>
+      </div>
+
+      <!-- ダイアリー一覧画面（diary） -->
+      <div class="view" id="view-diary" style="display: none;">
+        <header class="view-header">
+          <button class="btn-back" data-target="main">← 戻る</button>
+          <h2>ダイアリー</h2>
+          <button class="btn btn-primary" data-view="diaryCreate">新規作成</button>
+        </header>
+        <div class="diary-container">
+          <!-- ダイアリー一覧の内容をここに実装予定 -->
+          <p>ダイアリー一覧画面（実装予定）</p>
+        </div>
+      </div>
+
+      <!-- ダイアリー作成画面（diaryCreate） -->
+      <div class="view" id="view-diaryCreate" style="display: none;">
+        <header class="view-header">
+          <button class="btn-back" data-target="diary">← 戻る</button>
+          <h2>新しいダイアリー</h2>
+          <button class="btn btn-primary" id="save-diary">保存</button>
+        </header>
+        <div class="form-container">
+          <!-- ダイアリー作成フォームをここに実装予定 -->
+          <p>ダイアリー作成画面（実装予定）</p>
+        </div>
+      </div>
     </main>
+
+    <!-- オーバーレイ（モバイル用） -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
   </div>
 
   <script type="module" src="/src/main.ts"></script>
