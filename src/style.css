@@ -395,18 +395,25 @@
       color: white;
     }
 
-    /* サイドバー内のスクロール改善 */
+    /* サイドバー内要素の調整 - 固定を解除 */
     .calendar-container,
     .nav-menu {
       flex-shrink: 0;
-      /* サイドバー内での高さを固定 */
+      /* 高さは内容に応じて自動調整 */
     }
 
-    /* ナビゲーションメニューがたくさんある場合のスクロール対応 */
+    /* ナビゲーションメニューの制限を解除 */
     .nav-menu {
-      overflow-y: auto;
-      max-height: calc(100vh - 300px);
-      /* ヘッダーとカレンダー分を引く */
+      /* max-height を削除してスクロール制限をなくす */
+      overflow-y: visible;
+      /* デフォルトに戻す */
+      padding-bottom: var(--space-xl);
+      /* 下部に余白を追加 */
+    }
+
+    /* サイドバー全体に下部余白を追加 */
+    .sidebar {
+      padding-bottom: var(--space-xl);
     }
   }
 
