@@ -24,11 +24,11 @@ export function renderCalender(container: HTMLElement) {
             .map((d) => {
                 const key = toKey(d);
                 const isSel = isSameDay(d, fromKey(selectedDate));
-                const isSameMonth = d.getMonth() === base.getMonth();
+                // const isSameMonth = d.getMonth() === base.getMonth();
                 const klass = [
                     'cal-cell',
                     isSel ? 'is-selected' : '',
-                    isSameMonth ? '' : 'is-dim',
+                    // isSameMonth ? '' : 'is-dim',
                 ]
                     .filter(Boolean)
                     .join('');
