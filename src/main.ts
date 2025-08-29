@@ -1,5 +1,5 @@
 import './style.css'
-
+import type { DateKey } from './types';
 import { initStore, subscribe, setSelectedDate, getState } from './state';
 import { renderTaskForm } from './ui/taskForm';
 import { renderDayList } from './ui/dayList';
@@ -163,6 +163,16 @@ function initNavigation() {
     });
   });
 
+  // 日付ボタンのクリックイベント
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('cal-cell')) {
+      const date = target.getAttribute('data-date') as DateKey;
+      setSelectedDate(date);
+      showView('main');
+    }
+  });
+
   // URLハッシュから初期画面を設定
   const hash = window.location.hash.slice(1) as AppView;
   if (hash && ['main', 'create', 'diary', 'diaryCreate'].includes(hash)) {
@@ -210,7 +220,7 @@ function main() {
   // 今日ボタンのイベント
   ($('.btn-today') as HTMLButtonElement).addEventListener('click', () => {
     setSelectedDate(toKey(new Date()));
-    showView('main'); // メイン画面に戻る
+    showView('main');
   });
 
   // 初期画面の表示
