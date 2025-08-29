@@ -97,6 +97,29 @@ function initSidebarToggle() {
   // オーバーレイクリックで閉じる
   sidebarOverlay.addEventListener('click', closeSidebar);
 
+  // カレンダーの日付クリックでサイドバーを閉じる（モバイルのみ）
+  function handleCalendarClick() {
+    if (window.innerWidth <= 768) {
+      closeSidebar();
+    }
+  }
+
+  // カレンダーコンテナにイベントデリゲーションを設定
+  const calendarContainer = $('#calender');
+  calendarContainer.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    // カレンダーの日付セル（.cal-cell）がクリックされた場合
+    if (target.classList.contains('cal-cell')) {
+      handleCalendarClick();
+    }
+  });
+
+  // 「今日」ボタンクリックでもサイドバーを閉じる（モバイルのみ）
+  const todayButton = $optional('.btn-today');
+  if (todayButton) {
+    todayButton.addEventListener('click', handleCalendarClick);
+  }
+
   // ESCキーで閉じる
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
