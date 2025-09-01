@@ -1,6 +1,6 @@
 import './style.css'
 import type { DateKey } from './types';
-import { initStore, subscribe, setSelectedDate, getState } from './state';
+import { initStore, subscribe, setSelectedDate, getState, getTasksFor, isCompleted } from './state';
 import { renderTaskForm } from './ui/taskForm';
 import { renderDayList } from './ui/dayList';
 import { renderCalender } from './ui/calendar';
@@ -32,10 +32,20 @@ function updateDateLabel() {
 // 進捗情報の更新
 function updateProgressInfo() {
   // TODO: タスクの完了率を計算して表示
+  const { selectedDate } = getState();
+  const allTasks = getTasksFor(selectedDate);
+
   const progressInfo = $optional('#progress-info');
-  if (progressInfo) {
-    progressInfo.textContent = '1/2 完了'; // 仮の値
+  if (!progressInfo) return;
+
+  if (allTasks.length === 0) {
+    progressInfo.textContent = '';
+    return;
   }
+
+  // 完了・未完了でタスクを分離
+  const completedTasks = allTasks.filter(t => isCompleted(t.id, selectedDate));
+  progressInfo.textContent = `${completedTasks.length}/${allTasks.length}完了`;
 }
 
 // 画面表示の切り替え
