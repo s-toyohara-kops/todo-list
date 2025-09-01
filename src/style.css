@@ -302,11 +302,6 @@
     margin-bottom: var(--space-base);
   }
 
-  .card:hover {
-    box-shadow: var(--shadow-xl);
-    transform: translateY(-2px);
-  }
-
   /* ===== レスポンシブ（モバイル対応） ===== */
   .mobile-only {
     display: none;

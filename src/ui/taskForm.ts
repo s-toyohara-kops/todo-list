@@ -1,10 +1,10 @@
-import { addRecurringTask, addOneTimeTask } from '../state';
-import { toKey } from '../lib/date';
+import { addRecurringTask, addOneTimeTask, getState, setSelectedDate } from '../state';
 import type { Weekday, DateKey } from '../types';
 
 export function renderTaskForm(container: HTMLElement) {
-    const today = new Date();
-    const todayStr = toKey(today);
+    const { selectedDate } = getState();
+
+    console.log(selectedDate);
 
     container.innerHTML = `
     <form class="tfm" autocomplete="off">
@@ -21,7 +21,7 @@ export function renderTaskForm(container: HTMLElement) {
             </label>
 
             <div class="tfm-date-selector" data-disabled="false">
-                <input class="form-input" type="date" id="target-date" value="${todayStr}" />
+                <input class="form-input" type="date" id="selected-date" value="${selectedDate}" />
             </div>
 
             <label class="tfm-radio">
@@ -56,12 +56,19 @@ export function renderTaskForm(container: HTMLElement) {
 
     const elForm = container.querySelector('form.tfm') as HTMLElement;
     const elTitle = container.querySelector('.tfm-title') as HTMLInputElement;
-    const elTargetDate = container.querySelector('#target-date') as HTMLInputElement;
+    const elDateInput = container.querySelector('#selected-date') as HTMLInputElement;
     const elErr = container.querySelector('.tfm-error') as HTMLParagraphElement;
     const radios = Array.from(container.querySelectorAll<HTMLInputElement>('input[name="rule"]'));
     const weekdayBox = container.querySelector('.tfm-weekdays') as HTMLDivElement;
-    const dateSelector = container.querySelector('.tfm-date-selector') as HTMLDivElement;
 
+
+    // 日付入力フィールドの変更を監視
+    elDateInput.addEventListener('change', () => {
+        const newDate = elDateInput.value as DateKey;
+        if (newDate) {
+            setSelectedDate(newDate);
+        }
+    })
     // 繰り返し設定に応じて表示を切り替える
     const updateFormDisplay = () => {
         const rule = getRuleKind(radios);
@@ -73,22 +80,9 @@ export function renderTaskForm(container: HTMLElement) {
             cb.disabled = weekdayDisabled;
         });
 
-        // 日付選択の表示/非表示
-        const dateDisabled = rule !== undefined;
-        dateSelector.dataset.disabled = String(dateDisabled);
-        elTargetDate.disabled = dateDisabled;
-
-        if (dateDisabled) {
-            dateSelector.style.opacity = '0.5';
-            dateSelector.style.pointerEvents = 'none';
-        } else {
-            dateSelector.style.opacity = '1';
-            dateSelector.style.pointerEvents = 'auto';
-        }
-    };
-
-    radios.forEach(r => r.addEventListener('change', updateFormDisplay));
-    updateFormDisplay();
+        radios.forEach(r => r.addEventListener('change', updateFormDisplay));
+        updateFormDisplay();
+    }
 
     // フォーム送信
     elForm.addEventListener('submit', (e) => {
@@ -106,11 +100,10 @@ export function renderTaskForm(container: HTMLElement) {
         try {
             if (!rule) { // rule が undefined の場合（繰り返しなし）
                 // 繰り返しなし - 選択された日付を使用
-                const targetDateKey: DateKey = elTargetDate.value;
-                if (!targetDateKey) {
+                if (!selectedDate) {
                     return showError(elErr, '対象日を選択してください');
                 }
-                addOneTimeTask(title, targetDateKey);
+                addOneTimeTask(title, selectedDate);
             } else if (rule === 'daily') {
                 addRecurringTask(title, { kind: 'daily' });
             } else if (rule === 'weekly') {
@@ -123,15 +116,9 @@ export function renderTaskForm(container: HTMLElement) {
 
             // フォームをリセット
             elTitle.value = '';
-            elTargetDate.value = todayStr;
 
-            // 成功メッセージ（オプション）
-            showSuccess(elErr, 'タスクを追加しました！');
-
-            // フォーカスを戻す
-            setTimeout(() => {
-                elTitle.focus();
-            }, 100);
+            // メイン画面に戻る
+            window.location.hash = 'main';
 
         } catch (error) {
             showError(elErr, 'タスクの追加に失敗しました');
@@ -198,18 +185,4 @@ function showError(el: HTMLParagraphElement, msg: string) {
     el.style.border = '1px solid #f5c6cb';
 }
 
-function showSuccess(el: HTMLParagraphElement, msg: string) {
-    el.textContent = msg;
-    el.hidden = false;
-    el.style.color = '#155724';
-    el.style.background = '#d4edda';
-    el.style.padding = '8px 12px';
-    el.style.borderRadius = '6px';
-    el.style.border = '1px solid #c3e6cb';
-
-    // 3秒後に自動で隠す
-    setTimeout(() => {
-        el.hidden = true;
-    }, 3000);
-}
 
