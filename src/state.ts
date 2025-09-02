@@ -1,12 +1,16 @@
-import type { Store, Task, TaskId, RepeatRule, DateKey, Weekday } from './types';
+import type { Store, Task, TaskId, RepeatRule, DateKey, Weekday, DiaryEntry, DiaryEntryId, DiaryCategory } from './types';
 import { toKey, getWeekday } from './lib/date';
 import { loadFromStorage, saveToStorage } from './lib/storage';
 
+// デフォルトのダイアリーカテゴリー
+const DEFAULT_DIARY_CATEGORIES: DiaryCategory[] = ['日常', '仕事', '運動', '食事'];
 // 内部状態
 let store: Store = {
     tasks: [],
     completion: {},
     selectedDate: toKey(new Date()),
+    diaryEntries: [],
+    diaryCategories: [...DEFAULT_DIARY_CATEGORIES],
 };
 
 //変更通知
@@ -45,6 +49,8 @@ export function getState(): Store {
         tasks: [...store.tasks],
         completion: { ...store.completion },
         selectedDate: store.selectedDate,
+        diaryEntries: [...store.diaryEntries],
+        diaryCategories: [...store.diaryCategories],
     };
 }
 
@@ -53,13 +59,15 @@ export function initStore(date?: Date | DateKey) {
     const loadResult = loadFromStorage();
 
     if (loadResult.success && loadResult.data) {
-        store = { ...loadResult.data };
+        store = { ...loadResult.data, diaryEntries: loadResult.data.diaryEntries || [], diaryCategories: loadResult.data.diaryCategories || [...DEFAULT_DIARY_CATEGORIES] };
     } else {
         console.warn('LocalStorageの読み込みに失敗、デフォルト状態を使用:', loadResult.error);
         store = {
             tasks: [],
             completion: {},
-            selectedDate: toKey(new Date())
+            selectedDate: toKey(new Date()),
+            diaryEntries: [],
+            diaryCategories: [...DEFAULT_DIARY_CATEGORIES],
         };
     }
 
@@ -203,4 +211,75 @@ export function getTasksFor(date: Date | DateKey): Task[] {
         if (t.rule?.kind === 'weekEnds') return isWeekEnd;
         return false;
     });
+}
+
+// ダイアリーエントリーの追加
+export function addDiaryEntry(date: DateKey, category: DiaryCategory, content: string): DiaryEntry {
+    const entry: DiaryEntry = {
+        id: uuid(),
+        date,
+        category,
+        content: content.trim(),
+        createdAt: Date.now(),
+    };
+    store.diaryEntries.push(entry);
+    emit(true);
+    return entry;
+}
+
+// ダイアリーエントリーの更新
+export function updateDiaryEntry(id: DiaryEntryId, content: string): void {
+    const entry = store.diaryEntries.find(e => e.id === id);
+    if (!entry) return;
+
+    entry.content = content.trim();
+    entry.updatedAt = Date.now();
+    emit(true);
+}
+
+// ダイアリーエントリーの削除
+export function deleteDiaryEntry(id: DiaryEntryId): void {
+    const index = store.diaryEntries.findIndex(e => e.id === id);
+    if (index === -1) return;
+
+    store.diaryEntries.splice(index, 1);
+    emit(true);
+}
+
+// 特定日のダイアリーエントリーを取得
+export function getDiaryEntriesFor(date: DateKey): DiaryEntry[] {
+    return store.diaryEntries.filter(entry => entry.date === date);
+}
+
+// 全てのダイアリーを取得
+export function getAllDiaryEntries(): DiaryEntry[] {
+    return [...store.diaryEntries].sort((a, b) => b.createdAt - a.createdAt);
+}
+
+// カテゴリー別のダイアリーエントリーを取得
+export function getDiaryEntriesByCategory(category: DiaryCategory): DiaryEntry[] {
+    return [...store.diaryEntries].filter(entry => entry.category === category);
+}
+
+//　　ダイアリー　カテゴリーの追加
+export function addDiaryCategory(category: DiaryCategory): void {
+    const trimmed = category.trim();
+    if (!trimmed || store.diaryCategories.includes(trimmed)) return;
+
+    store.diaryCategories.push(trimmed);
+    emit(true);
+}
+
+// ダイアリーカテゴリーnの削除
+export function deleteDiaryCategory(category: DiaryCategory): void {
+    const index = store.diaryCategories.indexOf(category);
+    if (index === -1) return;
+
+    store.diaryCategories.splice(index, 1);
+    emit(true);
+}
+
+//　ダイアリーカテゴリー一覧を取得
+export function getDiaryCategories(): DiaryCategory[] {
+    return [...store.diaryCategories];
 }

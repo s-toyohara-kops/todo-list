@@ -34,10 +34,11 @@ export function isSameDay(a: Date, b: Date): boolean {
 }
 
 // 画面表示用の日付文字列
-export function formatDateLabel(d: Date): string {
-    const y = d.getFullYear();
-    const m = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
+export function formatDateLabel(d: Date | DateKey): string {
+    const date = typeof d === 'string' ? fromKey(d) : d;
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
     return `${y}/${m}/${day}`;
 }
 

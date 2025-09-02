@@ -5,6 +5,7 @@ import { renderTaskForm } from './ui/taskForm';
 import { renderDayList } from './ui/dayList';
 import { renderCalender } from './ui/calendar';
 import { fromKey, formatDateLabel, weekdayJp, toKey } from './lib/date';
+import { renderDiaryList } from './ui/diaryList';
 
 // ユーティリティ関数
 function $(sel: string, root: Document | HTMLElement = document) {
@@ -71,6 +72,14 @@ function showView(view: AppView) {
 
   // URLハッシュを更新
   window.location.hash = view;
+
+  // ビュー固有の処理
+  if (view === 'create') {
+    const taskFormEl = targetView.querySelector('.task-form');
+    if (taskFormEl) renderTaskForm(taskFormEl as HTMLElement);
+  } else if (view === 'diary') {
+    renderDiaryList(targetView);
+  }
 }
 
 // サイドバーのトグル機能
