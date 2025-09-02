@@ -6,6 +6,7 @@ import { renderDayList } from './ui/dayList';
 import { renderCalender } from './ui/calendar';
 import { fromKey, formatDateLabel, weekdayJp, toKey } from './lib/date';
 import { renderDiaryList } from './ui/diaryList';
+import { renderDiaryCreate } from './ui/diaryCreate';
 
 // ユーティリティ関数
 function $(sel: string, root: Document | HTMLElement = document) {
@@ -51,35 +52,47 @@ function updateProgressInfo() {
 
 // 画面表示の切り替え
 function showView(view: AppView) {
-  // 全ての画面を非表示
-  document.querySelectorAll('.view').forEach(el => {
-    (el as HTMLElement).style.display = 'none';
+  // すべてのビューを非表示
+  document.querySelectorAll('.view').forEach(v => {
+    (v as HTMLElement).style.display = 'none';
   });
 
-  // 指定された画面を表示
+  // 対象ビューを表示
   const targetView = $(`#view-${view}`);
-  targetView.style.display = 'block';
+  if (targetView) {
+    targetView.style.display = 'block';
+
+    // ビュー固有の処理
+    if (view === 'create') {
+      const taskFormEl = targetView.querySelector('.task-form');
+      if (taskFormEl) renderTaskForm(taskFormEl as HTMLElement);
+    } else if (view === 'diary') {
+      renderDiaryList(targetView);
+    } else if (view === 'diaryCreate') {
+      renderDiaryCreate(targetView);
+    }
+  }
 
   // ナビゲーションのアクティブ状態を更新
-  document.querySelectorAll('.nav-item').forEach(el => {
-    el.classList.remove('is-active');
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('is-active');
   });
 
-  const activeNavItem = $optional(`[data-view="${view}"]`);
+  const activeNavItem = document.querySelector(`[data-view="${view}"]`);
   if (activeNavItem) {
     activeNavItem.classList.add('is-active');
   }
 
-  // URLハッシュを更新
-  window.location.hash = view;
+  // URLハッシュを更新（既存のクエリパラメータがある場合は保持）
+  const currentHash = window.location.hash;
+  const hasQueryParams = currentHash.includes('?');
 
-  // ビュー固有の処理
-  if (view === 'create') {
-    const taskFormEl = targetView.querySelector('.task-form');
-    if (taskFormEl) renderTaskForm(taskFormEl as HTMLElement);
-  } else if (view === 'diary') {
-    renderDiaryList(targetView);
+  if (!hasQueryParams || !currentHash.startsWith(`#${view}`)) {
+    window.location.hash = view;
   }
+
+  updateDateLabel();
+  updateProgressInfo();
 }
 
 // サイドバーのトグル機能
@@ -133,7 +146,7 @@ function initSidebarToggle() {
     }
   });
 
-  // 「今日」ボタンクリックでもサイドバーを閉じる（モバイルのみ）
+  // 「今日」ボタンクリックでもサイドバーを閉じる
   const todayButton = $optional('.btn-today');
   if (todayButton) {
     todayButton.addEventListener('click', handleCalendarClick);
@@ -161,6 +174,8 @@ function initNavigation() {
   document.querySelectorAll('[data-view]').forEach(button => {
     button.addEventListener('click', () => {
       const view = button.getAttribute('data-view') as AppView;
+      // クエリパラメータをクリアしてからビューを表示
+      window.location.hash = view;
       showView(view);
 
       // モバイルでナビゲーション後はサイドバーを閉じる
@@ -178,6 +193,7 @@ function initNavigation() {
   document.querySelectorAll('.btn-back').forEach(button => {
     button.addEventListener('click', () => {
       const target = button.getAttribute('data-target') as AppView;
+      window.location.hash = target;
       showView(target);
     });
   });
@@ -192,21 +208,23 @@ function initNavigation() {
     }
   });
 
+  // ハッシュ変更のイベントリスナーを追加
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.slice(1);
+    const view = hash.split('?')[0] as AppView;
+    if (view && ['main', 'create', 'diary', 'diaryCreate'].includes(view)) {
+      showView(view);
+    }
+  });
+
   // URLハッシュから初期画面を設定
-  const hash = window.location.hash.slice(1) as AppView;
-  if (hash && ['main', 'create', 'diary', 'diaryCreate'].includes(hash)) {
-    showView(hash);
+  const hash = window.location.hash.slice(1);
+  const view = hash.split('?')[0] as AppView;
+  if (view && ['main', 'create', 'diary', 'diaryCreate'].includes(view)) {
+    showView(view);
   } else {
     showView('main');
   }
-
-  // ブラウザの戻る/進むボタン対応
-  window.addEventListener('hashchange', () => {
-    const hash = window.location.hash.slice(1) as AppView;
-    if (hash && ['main', 'create', 'diary', 'diaryCreate'].includes(hash)) {
-      showView(hash);
-    }
-  });
 }
 
 // メインのレンダリング関数

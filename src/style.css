@@ -796,6 +796,8 @@
     border: 1px solid var(--color-base);
     border-radius: var(--radius-md);
     overflow: hidden;
+    width: fit-content;
+    /* デスクトップ: コンテナ幅を内容に合わせる */
   }
 
   .filter-btn {
@@ -804,9 +806,11 @@
     border-right: 1px solid var(--color-base);
     background: white;
     color: var(--color-secondary);
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
     transition: all 0.2s ease;
+    min-width: auto;
   }
 
   .filter-btn:last-child {
@@ -873,20 +877,6 @@
     gap: 0.25rem;
   }
 
-  .btn-icon {
-    background: none;
-    border: none;
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s ease;
-  }
-
-  .btn-icon:hover {
-    background: var(--color-base);
-  }
-
   .entry-content {
     margin-bottom: 0.75rem;
     line-height: 1.6;
@@ -924,20 +914,186 @@
   /* モバイル対応 */
   @media (max-width: 768px) {
     .entry-header {
-      flex-direction: column;
+      flex-direction: row;
+      /* 横並びを維持 */
+      justify-content: space-between;
+      /* 両端寄せ */
+      align-items: flex-start;
+      /* 上揃え */
       gap: 0.5rem;
+      /* 適切な間隔 */
+    }
+
+    .entry-meta {
+      flex: 1;
+      /* 左側のスペースを占有 */
     }
 
     .entry-actions {
-      align-self: flex-end;
+      flex-shrink: 0;
+      /* ボタンサイズを固定 */
+      align-self: flex-start;
+      /* 上揃え */
     }
 
     .filter-buttons {
       flex-direction: column;
+      /* 縦並び */
+      width: 100%;
+      /* 全幅使用 */
     }
 
     .filter-btn {
+      border-right: none;
+      /* 右ボーダーを削除 */
+      border-bottom: 1px solid var(--color-base);
+      /* 下ボーダーを追加 */
+      padding: 0.75rem 1rem;
+      /* パディングを大きく */
+      font-size: 0.9rem;
+      /* フォントサイズを大きく */
       justify-content: center;
+      /* 中央揃え */
+    }
+
+    .filter-btn:last-child {
+      border-bottom: none;
+      /* 最後の要素の下ボーダーを削除 */
+    }
+  }
+
+  /* ダイアリー作成・編集画面 */
+  .diary-form {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+
+  .form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--color-base);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 200px;
+  }
+
+  .form-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .category-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .category-input-group select {
+    flex: 1;
+  }
+
+  #add-category-btn {
+    margin-left: 0.5rem;
+    /* 新規ボタンに左マージンを追加 */
+  }
+
+  .new-category-input {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background: var(--color-base);
+    border-radius: var(--radius-md);
+  }
+
+  .category-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-base);
+  }
+
+  .view-title {
+    text-align: center;
+    flex: 1;
+  }
+
+  /* モバイル対応 */
+  @media (max-width: 768px) {
+    .diary-form {
+      margin: 0;
+    }
+
+    .category-input-group {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    #add-category-btn {
+      margin-left: 0;
+      /* モバイルでは左マージンをリセット */
+      margin-top: 0.5rem;
+      /* 代わりに上マージンを追加 */
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .category-actions {
+      flex-direction: column;
+    }
+  }
+
+  /* モバイル対応 */
+  @media (max-width: 768px) {
+    .main-header {
+      flex-direction: row;
+      /* 横並びを維持 */
+      justify-content: space-between;
+      /* 両端寄せ */
+      align-items: center;
+    }
+
+    .date-info {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 1rem;
+    }
+
+    .date-label {
+      text-align: center;
+      margin: 0;
+    }
+
+    .progress-info {
+      text-align: right;
+      margin-top: 0;
+      white-space: nowrap;
     }
   }
 }

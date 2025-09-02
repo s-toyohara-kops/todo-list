@@ -5,7 +5,7 @@ import {
     setCompletion,
     editTask,
     deleteTask,
-    hideTaskForDate,
+    removeTaskFromDate,
 } from '../state';
 import type { Task } from '../types';
 
@@ -152,11 +152,13 @@ function showDeleteDialog(task: Task, selectedDate: string, callback: () => void
         callback();
     };
 
+    // この日のみ削除
     deleteTodayBtn.addEventListener('click', () => {
-        hideTaskForDate(task.id, selectedDate);
+        removeTaskFromDate(task.id, selectedDate);
         closeDialog();
     });
 
+    // 全体削除
     deleteAllBtn.addEventListener('click', () => {
         if (confirm(`「${task.title}」を完全に削除しますか？\n（すべての日から削除されます）`)) {
             deleteTask(task.id);

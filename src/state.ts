@@ -4,6 +4,7 @@ import { loadFromStorage, saveToStorage } from './lib/storage';
 
 // デフォルトのダイアリーカテゴリー
 const DEFAULT_DIARY_CATEGORIES: DiaryCategory[] = ['日常', '仕事', '運動', '食事'];
+
 // 内部状態
 let store: Store = {
     tasks: [],
@@ -12,6 +13,10 @@ let store: Store = {
     diaryEntries: [],
     diaryCategories: [...DEFAULT_DIARY_CATEGORIES],
 };
+
+// 隠されたタスクの管理
+type HiddenTasksMap = Record<DateKey, Set<TaskId>>;
+let hiddenTasks: HiddenTasksMap = {};
 
 //変更通知
 type Listener = () => void;
@@ -119,14 +124,6 @@ export function editTask(id: TaskId, nextTitle: string) {
     emit(true);
 }
 
-// アーカイブ
-export function archiveTask(id: TaskId) {
-    const t = store.tasks.find(((x) => x.id === id));
-    if (!t) return;
-    t.archived = true;
-    emit(true);
-}
-
 // 当日の完了状態を取得
 export function isCompleted(id: TaskId, date: Date | DateKey): boolean {
     const key = typeof date === 'string' ? date : toKey(date);
@@ -142,27 +139,7 @@ export function setCompletion(id: TaskId, date: Date | DateKey, done: boolean) {
     emit(true);
 }
 
-// 隠されたタスクの管理
-type HiddenTasksMap = Record<DateKey, Set<TaskId>>;
-let hiddenTasks: HiddenTasksMap = {};
-
-// 特定の日にタスクを隠す
-export function hideTaskForDate(id: TaskId, date: Date | DateKey) {
-    const key = typeof date === 'string' ? date : toKey(date);
-    if (!hiddenTasks[key]) {
-        hiddenTasks[key] = new Set();
-    }
-    hiddenTasks[key].add(id);
-    emit(true);
-}
-
-// タスクが特定の日に隠されているかチェック
-export function isTaskHiddenForDate(id: TaskId, date: Date | DateKey): boolean {
-    const key = typeof date === 'string' ? date : toKey(date);
-    return hiddenTasks[key]?.has(id) ?? false;
-}
-
-// タスクを完全に削除
+// タスクを削除
 export function deleteTask(id: TaskId) {
     const index = store.tasks.findIndex(t => t.id === id);
     if (index === -1) return;
@@ -173,21 +150,23 @@ export function deleteTask(id: TaskId) {
         delete store.completion[dateKey][id];
     }
 
-    // 隠し状態も削除
-    for (const dateKey in hiddenTasks) {
-        hiddenTasks[dateKey].delete(id);
-    }
-
     emit(true);
 }
 
-// 特定の日のタスク完了状態のみ削除（スケジュールタスク用）
-export function deleteCompletionForDate(id: TaskId, date: Date | DateKey) {
+// 特定の日からタスクを削除
+export function removeTaskFromDate(id: TaskId, date: Date | DateKey) {
     const key = typeof date === 'string' ? date : toKey(date);
-    if (store.completion[key]) {
-        delete store.completion[key][id];
+    if (!hiddenTasks[key]) {
+        hiddenTasks[key] = new Set();
     }
+    hiddenTasks[key].add(id);
     emit(true);
+}
+
+// タスクが特定の日から削除されているかチェック
+export function isTaskRemovedFromDate(id: TaskId, date: Date | DateKey): boolean {
+    const key = typeof date === 'string' ? date : toKey(date);
+    return hiddenTasks[key]?.has(id) ?? false;
 }
 
 // 指定日の表示対象タスクを算出
@@ -201,8 +180,8 @@ export function getTasksFor(date: Date | DateKey): Task[] {
     return store.tasks.filter((t) => {
         if (t.archived) return false;
 
-        // この日に隠されているタスクは表示しない
-        if (isTaskHiddenForDate(t.id, key)) return false;
+        // この日から削除されているタスクは表示しない
+        if (isTaskRemovedFromDate(t.id, key)) return false;
 
         if (!t.rule) return t.targetDate === key;
         if (t.rule?.kind === 'daily') return true;
@@ -227,11 +206,13 @@ export function addDiaryEntry(date: DateKey, category: DiaryCategory, content: s
     return entry;
 }
 
-// ダイアリーエントリーの更新
-export function updateDiaryEntry(id: DiaryEntryId, content: string): void {
+// ダイアリーエントリーの完全更新（日付・カテゴリー・内容すべて）
+export function updateDiaryEntryFull(id: DiaryEntryId, date: DateKey, category: DiaryCategory, content: string): void {
     const entry = store.diaryEntries.find(e => e.id === id);
     if (!entry) return;
 
+    entry.date = date;
+    entry.category = category;
     entry.content = content.trim();
     entry.updatedAt = Date.now();
     emit(true);

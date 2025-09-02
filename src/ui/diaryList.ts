@@ -1,6 +1,6 @@
-import { getState, getAllDiaryEntries, getDiaryEntriesFor, getDiaryCategories, deleteDiaryEntry } from '../state';
+import { getState, getAllDiaryEntries, getDiaryEntriesFor, getDiaryEntriesByCategory, getDiaryCategories, deleteDiaryEntry } from '../state';
 import { formatDateLabel } from '../lib/date';
-import type { DiaryEntry, DateKey } from '../types';
+import type { DiaryEntry, DateKey, DiaryCategory } from '../types';
 
 let currentFilter: { type: 'all' | 'date' | 'category'; value?: string } = { type: 'all' };
 
@@ -9,9 +9,10 @@ export function renderDiaryList(container: HTMLElement) {
 
     container.innerHTML = `
         <div class="view-header">
-            <h2>📖 ダイアリー</h2>
+            <button class="sidebar-toggle mobile-only" id="sidebar-toggle">☰</button>
+            <h2>ダイアリー</h2>
             <button class="btn btn-primary" onclick="window.location.hash='diaryCreate'">
-                ✏️ 新規作成
+                新規作成
             </button>
         </div>
         
@@ -45,7 +46,6 @@ export function renderDiaryList(container: HTMLElement) {
         </div>
         
         <div class="diary-entries" id="diary-entries">
-            <!-- エントリー一覧がここに表示される -->
         </div>
     `;
 
@@ -57,6 +57,21 @@ export function renderDiaryList(container: HTMLElement) {
 }
 
 function setupEventListeners(container: HTMLElement) {
+    // サイドバートグルボタンのイベントリスナーを追加
+    const sidebarToggle = container.querySelector('#sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            const sidebar = document.querySelector('#sidebar');
+            const overlay = document.querySelector('#sidebar-overlay');
+
+            if (sidebar && overlay) {
+                sidebar.classList.add('is-open');
+                overlay.classList.add('is-visible');
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    }
+
     // フィルターボタンのイベント
     container.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -113,7 +128,6 @@ function handleFilterChange(filterType: 'all' | 'today' | 'date' | 'category', c
 
         case 'date':
             dateFilter.style.display = 'block';
-            // 現在の日付選択値でフィルター適用
             if (dateSelect.value) {
                 currentFilter = { type: 'date', value: dateSelect.value };
             } else {
@@ -126,7 +140,6 @@ function handleFilterChange(filterType: 'all' | 'today' | 'date' | 'category', c
         case 'category':
             categoryFilter.style.display = 'block';
             categorySelect.value = '';
-            // カテゴリー選択まで待つ
             return;
     }
 
@@ -152,7 +165,7 @@ function updateDiaryList(container: HTMLElement) {
             break;
 
         case 'category':
-            entries = getAllDiaryEntries().filter(entry => entry.category === currentFilter.value);
+            entries = getDiaryEntriesByCategory(currentFilter.value as DiaryCategory);
             statusText = `「${currentFilter.value}」カテゴリー ${entries.length} 件`;
             break;
     }
@@ -165,26 +178,20 @@ function updateDiaryList(container: HTMLElement) {
         <div class="diary-entry-card card" data-entry-id="${entry.id}">
             <div class="entry-header">
                 <div class="entry-meta">
-                    <span class="entry-date">📅 ${formatDateLabel(entry.date)}</span>
+                    <span class="entry-date">🗓️ ${formatDateLabel(entry.date)}</span>
                     <span class="entry-category">🏷️ ${entry.category}</span>
                 </div>
                 <div class="entry-actions">
-                    <button class="btn-icon edit-btn" data-entry-id="${entry.id}" title="編集">
-                        ✏️
+                    <button class="dl-btn edit-btn" data-entry-id="${entry.id}">
+                        編集
                     </button>
-                    <button class="btn-icon delete-btn" data-entry-id="${entry.id}" title="削除">
-                        🗑️
+                    <button class="dl-btn dl-danger delete-btn" data-entry-id="${entry.id}">
+                        削除
                     </button>
                 </div>
             </div>
             <div class="entry-content">
                 ${entry.content.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
-            </div>
-            <div class="entry-footer">
-                <small class="entry-time">
-                    作成: ${new Date(entry.createdAt).toLocaleString('ja-JP')}
-                    ${entry.updatedAt ? `・更新: ${new Date(entry.updatedAt).toLocaleString('ja-JP')}` : ''}
-                </small>
             </div>
         </div>
     `).join('');
@@ -201,7 +208,8 @@ function setupEntryEventListeners(container: HTMLElement) {
             const entryId = (e.target as HTMLElement).dataset.entryId;
             if (entryId) {
                 // 編集画面に遷移（エントリーIDをURLハッシュに含める）
-                window.location.hash = `diaryCreate?edit=${entryId}`;
+                const editUrl = `diaryCreate?edit=${entryId}`;
+                window.location.hash = editUrl;
             }
         });
     });
