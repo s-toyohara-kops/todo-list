@@ -192,6 +192,16 @@ export function getTasksFor(date: Date | DateKey): Task[] {
     });
 }
 
+// 全てのタスクを取得
+export function getAllTasks(): Task[] {
+    return [...store.tasks].filter(t => !t.archived);
+}
+
+// 特定のタスクを取得
+export function getTaskById(id: TaskId): Task | undefined {
+    return store.tasks.find(t => t.id === id);
+}
+
 // ダイアリーエントリーの追加
 export function addDiaryEntry(date: DateKey, category: DiaryCategory, content: string): DiaryEntry {
     const entry: DiaryEntry = {
@@ -264,3 +274,175 @@ export function deleteDiaryCategory(category: DiaryCategory): void {
 export function getDiaryCategories(): DiaryCategory[] {
     return [...store.diaryCategories];
 }
+
+
+// カスタム期間の日付配列を取得
+export function getDateRange(startDate: DateKey, endDate: DateKey): DateKey[] {
+    const dates: DateKey[] = [];
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T23:59:59');
+
+    const current = new Date(start);
+    while (current <= end) {
+        dates.push(toKey(current));
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+// 今週の日付配列を取得
+export function getCurrentWeekDates(): DateKey[] {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - dayOfWeek);
+
+    const dates: DateKey[] = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        dates.push(toKey(date));
+    }
+    return dates;
+
+}
+
+// 先週の日付配列を取得
+export function getPreviousWeekDates(): DateKey[] {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - dayOfWeek - 7);
+
+    const dates: DateKey[] = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        dates.push(toKey(date));
+    }
+    return dates;
+}
+
+// 今月の日付配列を取得
+export function getCurrentMonthDates(): DateKey[] {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    return getDateRange(toKey(firstDay), toKey(lastDay));
+}
+
+// 　先月の日付配列を取得
+export function getPreviousMonthDates(): DateKey[] {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() - 1;
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    return getDateRange(toKey(firstDay), toKey(lastDay));
+}
+
+// 指定期間でのタスクのパフォーマンスを計算
+export function calculateTaskPerformance(taskId: TaskId, dates: DateKey[]): {
+    totalDays: number;
+    completedDays: number;
+    achievementRate: number;
+} {
+    let totalDays = 0;
+    let completedDays = 0;
+
+    for (const date of dates) {
+        const tasksForDate = getTasksFor(date);
+        const hasTask = tasksForDate.some(task => task.id === taskId);
+
+        if (hasTask) {
+            totalDays++;
+            if (isCompleted(taskId, date)) {
+                completedDays++;
+            }
+        }
+    }
+
+    const achievementRate = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
+
+    return {
+        totalDays,
+        completedDays,
+        achievementRate
+    };
+}
+
+// 全タスクの指定期間でのパフォーマンスを取得
+export function getAllTasksPerformance(dates: DateKey[]) {
+    const allTasks = getAllTasks();
+
+    return allTasks.map(task => {
+        const performance = calculateTaskPerformance(task.id, dates);
+        return {
+            taskId: task.id,
+            taskName: task.title,
+            ...performance
+        };
+    });
+}
+
+// 指定期間の日別達成データを取得
+export function getDailyAchievements(dates: DateKey[]) {
+    return dates.map(date => {
+        const tasksForDate = getTasksFor(date);
+        const completedTasks = tasksForDate.filter(task => isCompleted(task.id, date));
+        const achievementRate = tasksForDate.length > 0
+            ? Math.round((completedTasks.length / tasksForDate.length) * 100)
+            : 0;
+
+        return {
+            date,
+            totalTasks: tasksForDate.length,
+            completedTasks: completedTasks.length,
+            achievementRate
+        };
+    });
+}
+
+// 指定期間で最も頑張った日を取得
+export function getBestDay(dates: DateKey[]) {
+    const dailyData = getDailyAchievements(dates);
+
+    return dailyData.reduce((best, current) => {
+        if (current.completedTasks > best.completedTasks) {
+            return current;
+        } else if (current.completedTasks === best.completedTasks && current.achievementRate > best.achievementRate) {
+            return current;
+        }
+        return best;
+    }, dailyData[0]);
+}
+
+// 連続達成日数を計算
+export function calculateStreakDays(taskId: TaskId, endDate: DateKey): number {
+    let streak = 0;
+    const endDateObj = new Date(endDate + 'T00:00:00');
+
+    for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(endDateObj);
+        checkDate.setDate(endDateObj.getDate() - i);
+        const dateKey = toKey(checkDate);
+
+        const tasksForDate = getTasksFor(dateKey);
+        const hasTask = tasksForDate.some(task => task.id === taskId);
+
+        if (hasTask && isCompleted(taskId, dateKey)) {
+            streak++;
+        } else if (hasTask) {
+            break;
+        }
+    }
+    return streak;
+}
+
+

@@ -68,3 +68,90 @@ export interface StorageResult<T> {
     data?: T;
     error?: string;
 }
+
+/** 期間フィルターの種類 */
+export type PeriodType = 'week' | 'month' | 'custom';
+
+/** 期間フィルター */
+export interface periodConfig {
+    type: PeriodType;
+    startDate?: DateKey;
+    endDate?: DateKey;
+}
+
+/** レポートフィルター */
+export interface ReportFilter {
+    selectedTaskId?: TaskId;
+    period: periodConfig;
+}
+
+/** タスクパフォーマンス */
+export interface TaskPerformance {
+    taskId: TaskId;
+    taskName: string;
+    totalDays: number;
+    completedDays: number;
+    achievementRate: number;
+}
+
+/** 日別の達成データ */
+export interface DailyAchievement {
+    date: DateKey;
+    totalTasks: number;
+    completedTasks: number;
+    achievementRate: number;
+}
+
+/** トレンド比較データ */
+export interface TrendComparison {
+    current: {
+        period: string;
+        achievementRate: number;
+        completedCount: number;
+        streakDays: number;
+    };
+    previous: {
+        period: string;
+        achievementRate: number;
+        completedCount: number;
+        streakDays: number;
+    };
+    changes: {
+        achievementRate: number;
+        completedCount: number;
+        streakDays: number;
+    };
+}
+
+/** ハイライト情報 */
+export interface HighlightInfo {
+    bestDay: {
+        date: DateKey;
+        completedCount: number;
+        totalTasks: number;
+    };
+    currentStreak: number;
+    longestStreak: number;
+    improvements: string[];
+}
+
+/** レポートデータ全体 */
+export interface ReportData {
+    filter: ReportFilter;
+    overview: {
+        taskPerformances: TaskPerformance[];
+        dailyAchievements: DailyAchievement[];
+        highlights: HighlightInfo;
+    };
+    taskDetail?: {
+        task: Task;
+        performance: TaskPerformance;
+        dailyData: Array<{
+            date: DateKey;
+            scheduled: boolean;
+            completed: boolean;
+        }>;
+        trend: TrendComparison;
+        highlights: HighlightInfo;
+    };
+}

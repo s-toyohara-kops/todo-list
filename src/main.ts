@@ -7,6 +7,7 @@ import { renderCalender } from './ui/calendar';
 import { fromKey, formatDateLabel, weekdayJp, toKey } from './lib/date';
 import { renderDiaryList } from './ui/diaryList';
 import { renderDiaryCreate } from './ui/diaryCreate';
+import { renderReport } from './ui/report';
 
 // ユーティリティ関数
 function $(sel: string, root: Document | HTMLElement = document) {
@@ -21,7 +22,7 @@ function $optional(sel: string, root: Document | HTMLElement = document) {
 }
 
 // アプリの状態管理
-type AppView = 'main' | 'create' | 'diary' | 'diaryCreate';
+type AppView = 'main' | 'create' | 'diary' | 'diaryCreate' | 'report';
 
 // 日付ラベルの更新
 function updateDateLabel() {
@@ -70,6 +71,9 @@ function showView(view: AppView) {
       renderDiaryList(targetView);
     } else if (view === 'diaryCreate') {
       renderDiaryCreate(targetView);
+    } else if (view === 'report') {
+      const reportEl = $('#view-report');
+      renderReport(reportEl);
     }
   }
 
