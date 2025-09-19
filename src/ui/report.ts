@@ -1,15 +1,11 @@
-import { getAllTasks, getCurrentWeekDates, getAllTasksPerformance, getBestDay, getDailyAchievements, getTasksFor, isCompleted, calculateTaskPerformance, calculateStreakDays, getPreviousWeekDates } from '../state';
+import { getAllTasks, getCurrentWeekDates, getAllTasksPerformance, getBestDay, getDailyAchievements, getTasksFor, isCompleted, calculateTaskPerformance, calculateStreakDays, getPreviousWeekDates, getCurrentMonthDates, getPreviousMonthDates, getDateRange } from '../state';
 import { toKey } from '../lib/date';
 
-// レポートの状態管理
-interface ReportState {
-    currentView: 'overview' | 'task-detail';
-    selectedTaskId: string | null;
-}
 
 let reportState: ReportState = {
     currentView: 'overview',
-    selectedTaskId: null
+    selectedTaskId: null,
+    periodType: 'week',
 };
 
 export function renderReport(container: HTMLElement) {
@@ -212,6 +208,66 @@ function setupReportEventListeners(container: HTMLElement) {
             }
         });
     }
+
+    // 期間フィルター
+    const applyPeriodFilter = container.querySelector('#apply-period-filter');
+    if (applyPeriodFilter) {
+        applyPeriodFilter.addEventListener('click', () => {
+            const activePeriodTab = container.querySelector('.period-tab.active') as HTMLElement;
+            const selectedPeriod = activePeriodTab?.dataset.period as 'week' | 'month' | 'custom';
+
+            if (selectedPeriod === 'custom') {
+                const startDateInput = container.querySelector('#start-date') as HTMLInputElement;
+                const endDateInput = container.querySelector('#end-date') as HTMLInputElement;
+                if (!startDateInput.value || !endDateInput.value) {
+                    alert('開始日と終了日を両方選択してください');
+                    return;
+                }
+                if (new Date(startDateInput.value) > new Date(endDateInput.value)) {
+                    alert('開始日が終了日より後の日付になっています');
+                    return;
+                }
+                reportState.customStartDate = startDateInput.value;
+                reportState.customEndDate = endDateInput.value;
+            }
+            reportState.periodType = selectedPeriod;
+
+            if (reportState.currentView === 'overview') {
+                updateOverviewData();
+            } else if (reportState.currentView === 'task-detail') {
+                updateTaskDetailData();
+            }
+        });
+    }
+
+    const resetPeriodFilter = container.querySelector('#reset-period-filter');
+    if (resetPeriodFilter) {
+        resetPeriodFilter.addEventListener('click', () => {
+            reportState.periodType = 'week';
+            reportState.customStartDate = undefined;
+            reportState.customEndDate = undefined;
+
+            const periodTabs = container.querySelectorAll('.period-tab');
+            periodTabs.forEach(tab => tab.classList.remove('active'));
+            const weekTab = container.querySelector('[data-period="week"]');
+            if (weekTab) weekTab.classList.add('active');
+
+            const customPeriod = container.querySelector('#custom-period') as HTMLElement;
+            if (customPeriod) customPeriod.style.display = 'none';
+
+            const startDateInput = container.querySelector('#start-date') as HTMLInputElement;
+            const endDateInput = container.querySelector('#end-date') as HTMLInputElement;
+            if (startDateInput) startDateInput.value = '';
+            if (endDateInput) endDateInput.value = '';
+
+            if (reportState.currentView === 'overview') {
+                updateOverviewData();
+            } else if (reportState.currentView === 'task-detail') {
+                updateTaskDetailData();
+            }
+        });
+    }
+
 }
 
 function initializeReport() {
@@ -261,8 +317,8 @@ function updatePerformanceList() {
     const performanceList = document.getElementById('performance-list');
     if (!performanceList) return;
 
-    const weekDates = getCurrentWeekDates();
-    const taskPerformances = getAllTasksPerformance(weekDates);
+    const dates = getCurrentPeriodDates();
+    const taskPerformances = getAllTasksPerformance(dates);
 
     if (taskPerformances.length === 0) {
         performanceList.innerHTML = '<p class="empty-state">タスクがありません</p>';
@@ -287,8 +343,8 @@ function updateDailyChart() {
     const chartContainer = document.getElementById('daily-chart');
     if (!chartContainer) return;
 
-    const weekDates = getCurrentWeekDates();
-    const dailyAchievements = getDailyAchievements(weekDates);
+    const dates = getCurrentPeriodDates();
+    const dailyAchievements = getDailyAchievements(dates);
 
     const chartData = dailyAchievements.map((day) => {
         const date = new Date(day.date + 'T00:00:00');
@@ -312,8 +368,8 @@ function updateHighlightInfo() {
     const highlightInfo = document.getElementById('highlight-info');
     if (!highlightInfo) return;
 
-    const weekDates = getCurrentWeekDates();
-    const bestDay = getBestDay(weekDates);
+    const dates = getCurrentPeriodDates();
+    const bestDay = getBestDay(dates);
 
     if (!bestDay) {
         highlightInfo.innerHTML = '<p class="empty-state">データがありません</p>';
@@ -324,7 +380,7 @@ function updateHighlightInfo() {
     const dateStr = `${bestDate.getMonth() + 1}/${bestDate.getDate()}`;
 
     // 週全体の統計を計算
-    const weekStats = calculateWeekStats(weekDates);
+    const weekStats = calculateWeekStats(dates);
 
     highlightInfo.innerHTML = `
         <div class="highlight-item">
@@ -340,8 +396,8 @@ function updateHighlightInfo() {
 }
 
 // 週全体の統計を計算するヘルパー関数
-function calculateWeekStats(weekDates: string[]) {
-    const dailyAchievements = getDailyAchievements(weekDates);
+function calculateWeekStats(dates: string[]) {
+    const dailyAchievements = getDailyAchievements(dates);
 
     const totalCompleted = dailyAchievements.reduce((sum, day) => sum + day.completedTasks, 0);
     const totalTasks = dailyAchievements.reduce((sum, day) => sum + day.totalTasks, 0);
@@ -382,7 +438,7 @@ function updateFilterStatus() {
 
     filterStatusText.innerHTML = `
     タスク：<strong>${taskName}</strong><br>
-    期間：今週（${getCurrentWeekDateRange()}）
+    期間：${getPeriodLabel()}
     `;
 }
 
@@ -392,7 +448,7 @@ function updateTaskTable() {
 
     if (!taskTable || !taskTitle || !reportState.selectedTaskId) return;
 
-    const weekDates = getCurrentWeekDates();
+    const dates = getCurrentPeriodDates();
     const task = getAllTasks().find(t => t.id === reportState.selectedTaskId);
 
     if (!task) {
@@ -404,7 +460,7 @@ function updateTaskTable() {
     taskTitle.textContent = task.title;
     console.log('task.title:', task.title);
 
-    const tableRows = weekDates.map(date => {
+    const tableRows = dates.map(date => {
         const tasksForDate = getTasksFor(date);
         const taskExists = tasksForDate.some(t => t.id === task.id);
         const completed = taskExists && isCompleted(task.id, date);
@@ -440,8 +496,8 @@ function updateTaskStats() {
 
     if (!achievementRate || !streakDays || !reportState.selectedTaskId) return;
 
-    const weekDates = getCurrentWeekDates();
-    const performance = calculateTaskPerformance(reportState.selectedTaskId, weekDates);
+    const dates = getCurrentPeriodDates();
+    const performance = calculateTaskPerformance(reportState.selectedTaskId, dates);
 
     const today = toKey(new Date());
     const streak = calculateStreakDays(reportState.selectedTaskId, today)
@@ -454,11 +510,11 @@ function updateTrendAnalysis() {
     const trendContent = document.getElementById('trend-content');
     if (!trendContent || !reportState.selectedTaskId) return;
 
-    const thisWeekDates = getCurrentWeekDates();
-    const lastWeekDates = getPreviousWeekDates();
+    const currentDates = getCurrentPeriodDates();
+    const previousDates = getPreviousPeriodDates();
 
-    const thisWeekPerformance = calculateTaskPerformance(reportState.selectedTaskId, thisWeekDates);
-    const lastWeekPerformance = calculateTaskPerformance(reportState.selectedTaskId, lastWeekDates);
+    const thisWeekPerformance = calculateTaskPerformance(reportState.selectedTaskId, currentDates);
+    const lastWeekPerformance = calculateTaskPerformance(reportState.selectedTaskId, previousDates);
 
     const rateChange = thisWeekPerformance.achievementRate - lastWeekPerformance.achievementRate;
     const completedChange = thisWeekPerformance.completedDays - lastWeekPerformance.completedDays;
@@ -469,9 +525,13 @@ function updateTrendAnalysis() {
         return `${sign}${change}${unit}`;
     };
 
+    const periodLabel = getPeriodLabel();
+    const previousPeriodLabel = getPreviousPeriodLabel();
+
+
     trendContent.innerHTML = `
         <div class="trend-item">
-            <h4>今週 vs 先週</h4>
+            <h4>${periodLabel} vs ${previousPeriodLabel}</h4>
             <div class="trend-stats">
                 <div class="trend-stat">
                     達成率: ${lastWeekPerformance.achievementRate}% → ${thisWeekPerformance.achievementRate}% 
@@ -493,8 +553,8 @@ function updateTaskHighlights() {
     const taskHighlightInfo = document.getElementById('task-highlight-info');
     if (!taskHighlightInfo || !reportState.selectedTaskId) return;
 
-    const weekDates = getCurrentWeekDates();
-    const performance = calculateTaskPerformance(reportState.selectedTaskId, weekDates);
+    const dates = getCurrentPeriodDates();
+    const performance = calculateTaskPerformance(reportState.selectedTaskId, dates);
     const task = getAllTasks().find(t => t.id === reportState.selectedTaskId);
 
     if (!task) return;
@@ -522,14 +582,87 @@ function updateTaskHighlights() {
     `;
 }
 
-// ヘルパー関数: 今週の日付範囲を文字列で取得
-function getCurrentWeekDateRange(): string {
-    const weekDates = getCurrentWeekDates();
-    const startDate = new Date(weekDates[0] + 'T00:00:00');
-    const endDate = new Date(weekDates[weekDates.length - 1] + 'T00:00:00');
+// レポートの状態管理を拡張
+interface ReportState {
+    currentView: 'overview' | 'task-detail';
+    selectedTaskId: string | null;
+    periodType: 'week' | 'month' | 'custom';
+    customStartDate?: string;
+    customEndDate?: string;
+}
+
+// 期間に応じた日付配列を取得
+function getCurrentPeriodDates(): string[] {
+    switch (reportState.periodType) {
+        case 'week':
+            return getCurrentWeekDates();
+        case 'month':
+            return getCurrentMonthDates();
+        case 'custom':
+            if (reportState.customStartDate && reportState.customEndDate) {
+                return getDateRange(reportState.customStartDate, reportState.customEndDate)
+            }
+            return getCurrentWeekDates();
+        default:
+            return getCurrentWeekDates();
+    }
+}
+
+// 前期間の日付配列を取得
+function getPreviousPeriodDates(): string[] {
+    switch (reportState.periodType) {
+        case 'week':
+            return getPreviousWeekDates();
+        case 'month':
+            return getPreviousMonthDates();
+        case 'custom':
+            if (reportState.customStartDate && reportState.customEndDate) {
+                const startDate = new Date(reportState.customStartDate + 'T00:00:00');
+                const endDate = new Date(reportState.customEndDate + 'T00:00:00');
+                const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                const prevEndDate = new Date(startDate);
+                prevEndDate.setDate(startDate.getDate() - 1);
+                const prevStartDate = new Date(startDate);
+                prevStartDate.setDate(prevStartDate.getDate() - daysDiff);
+
+                return getDateRange(toKey(prevStartDate), toKey(prevEndDate));
+            }
+            return getPreviousWeekDates();
+    }
+}
+
+// 現在の期間ラベルを取得
+function getPeriodLabel(): string {
+    const dates = getCurrentPeriodDates();
+    const startDate = new Date(dates[0] + 'T00:00:00');
+    const endDate = new Date(dates[dates.length - 1] + 'T00:00:00');
 
     const startStr = `${startDate.getMonth() + 1}/${startDate.getDate()}`;
     const endStr = `${endDate.getMonth() + 1}/${endDate.getDate()}`;
 
-    return `${startStr} - ${endStr}`;
+    switch (reportState.periodType) {
+        case 'week':
+            return `今週（${startStr} - ${endStr}）`;
+        case 'month':
+            return `今月（${startStr} - ${endStr}）`;
+        case 'custom':
+            return `カスタム期間（${startStr} - ${endStr}）`;
+        default:
+            return `今週（${startStr} - ${endStr}）`;
+    }
+}
+
+// 前期間の期間ラベルを取得
+function getPreviousPeriodLabel(): string {
+    switch (reportState.periodType) {
+        case 'week':
+            return '先週';
+        case 'month':
+            return '先月';
+        case 'custom':
+            return '前期間';
+        default:
+            return '先週';
+    }
 }
