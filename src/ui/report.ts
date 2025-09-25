@@ -1,5 +1,6 @@
 import { getAllTasks, getCurrentWeekDates, getAllTasksPerformance, getBestDay, getDailyAchievements, getTasksFor, isCompleted, calculateTaskPerformance, calculateStreakDays, getPreviousWeekDates, getCurrentMonthDates, getPreviousMonthDates, getDateRange } from '../state';
 import { toKey } from '../lib/date';
+import Chart from 'chart.js/auto';
 
 
 let reportState: ReportState = {
@@ -346,22 +347,95 @@ function updateDailyChart() {
     const dates = getCurrentPeriodDates();
     const dailyAchievements = getDailyAchievements(dates);
 
-    const chartData = dailyAchievements.map((day) => {
-        const date = new Date(day.date + 'T00:00:00');
-        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-        return `${dateStr}: ${day.achievementRate}%`;
-    }).join(' | ');
+    const existingCanvas = chartContainer.querySelector('canvas');
+    if (existingCanvas) {
+        existingCanvas.remove();
+    }
 
-    chartContainer.innerHTML = `
-        <div class="simple-chart">
-            <div class="chart-info">
-                ${chartData}
-            </div>
-            <div class="chart-visual">
-                達成率の推移: ${dailyAchievements.map(d => d.achievementRate + '%').join(' → ')}
-            </div>
-        </div>
-    `;
+    const canvas = document.createElement('canvas');
+    canvas.id = 'achievement-chart';
+    canvas.style.maxHeight = '320px';
+    chartContainer.appendChild(canvas);
+
+    // Chart.jsでグラフを作成
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const labels = dailyAchievements.map(day => {
+        const date = new Date(day.date + 'T00:00:00');
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+    });
+
+    const data = dailyAchievements.map(day => day.achievementRate);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '達成率',
+                data: data,
+                borderColor: 'rgb(139, 154, 122)',
+                backgroundColor: 'rgba(139, 154, 122, 0.1)',
+                borderWidth: 3,
+                pointBackgroundColor: 'rgb(139, 154, 122)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: 'rgb(139, 154, 122)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function (context) {
+                            return `達成率: ${context.parsed.y}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function (value) {
+                            return value + '%';
+                        },
+                        color: '#666'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#666'
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
 }
 
 function updateHighlightInfo() {
